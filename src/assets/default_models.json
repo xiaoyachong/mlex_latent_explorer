@@ -56,6 +56,23 @@
         "gui_parameters": [
             {
                 "type": "dropdown",
+                "name": "input-type-dropdown-menu",
+                "title": "Input Type",
+                "value": "raw_images",
+                "options": [
+                    {
+                        "label": "Raw Images",
+                        "value": "raw_images"
+                    },
+                    {
+                        "label": "Latent Features",
+                        "value": "latent_features"
+                    }
+                ],
+                "param_key": "input_type"
+            },
+            {
+                "type": "dropdown",
                 "name": "ncomp-dropdown-menu-2",
                 "title": "Number of Components",
                 "value": 2,

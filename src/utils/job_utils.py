@@ -125,31 +125,153 @@ def parse_job_params(
     return job_params
 
 
-def parse_model_params(model_parameters_html, log, percentiles, mask):
+# def parse_model_params(model_parameters_html, log, percentiles, mask):
+#     """
+#     Extracts parameters from the children component of a ParameterItems component,
+#     if there are any errors in the input, it will return an error status
+#     """
+#     errors = False
+#     input_params = {}
+#     for param in model_parameters_html["props"]["children"]:
+#         # param["props"]["children"][0] is the label
+#         # param["props"]["children"][1] is the input
+#         parameter_container = param["props"]["children"][1]
+#         # The achtual parameter item is the first and only child of the parameter container
+#         parameter_item = parameter_container["props"]["children"]["props"]
+#         key = parameter_item["id"]["param_key"]
+#         if "value" in parameter_item:
+#             value = parameter_item["value"]
+#         elif "checked" in parameter_item:
+#             value = parameter_item["checked"]
+#         if "error" in parameter_item:
+#             if parameter_item["error"] is not False:
+#                 errors = True
+#         input_params[key] = value
+
+#     # Manually add data transformation parameters
+#     input_params["log"] = log
+#     input_params["percentiles"] = percentiles
+#     input_params["mask"] = mask if mask != "None" else None
+#     return input_params, errors
+# modify it to handle both str or int from panel
+def parse_model_params(model_parameter_container, log, percentiles, mask):
     """
     Extracts parameters from the children component of a ParameterItems component,
     if there are any errors in the input, it will return an error status
     """
     errors = False
     input_params = {}
-    for param in model_parameters_html["props"]["children"]:
-        # param["props"]["children"][0] is the label
-        # param["props"]["children"][1] is the input
-        parameter_container = param["props"]["children"][1]
-        # The achtual parameter item is the first and only child of the parameter container
-        parameter_item = parameter_container["props"]["children"]["props"]
-        key = parameter_item["id"]["param_key"]
-        if "value" in parameter_item:
-            value = parameter_item["value"]
-        elif "checked" in parameter_item:
-            value = parameter_item["checked"]
-        if "error" in parameter_item:
-            if parameter_item["error"] is not False:
-                errors = True
-        input_params[key] = value
+    
+    # Add debugging output
+    print(f"Model parameter container type: {type(model_parameter_container)}")
+    
+    try:
+        if not isinstance(model_parameter_container, dict) or "props" not in model_parameter_container:
+            print("Warning: model_parameter_container is not a dict or doesn't have 'props'")
+            return {}, True
+            
+        if "children" not in model_parameter_container["props"]:
+            print("Warning: 'children' not in model_parameter_container['props']")
+            return {}, True
+            
+        children = model_parameter_container["props"]["children"]
+        if not isinstance(children, list):
+            print(f"Warning: children is not a list, it's a {type(children)}")
+            return {}, True
+            
+        for param in children:
+            try:
+                # Skip non-dictionary items
+                if not isinstance(param, dict):
+                    print(f"Skipping non-dict param: {type(param)}")
+                    continue
+                    
+                if "props" not in param:
+                    print("Skipping param without 'props'")
+                    continue
+                    
+                if "children" not in param["props"]:
+                    print("Skipping param without 'children'")
+                    continue
+                    
+                if not isinstance(param["props"]["children"], list) or len(param["props"]["children"]) < 2:
+                    print("Skipping param with invalid children structure")
+                    continue
+                
+                # param["props"]["children"][0] is the label
+                # param["props"]["children"][1] is the input
+                parameter_container = param["props"]["children"][1]
+                
+                # Skip if parameter_container is not a dictionary
+                if not isinstance(parameter_container, dict):
+                    print(f"Skipping non-dict parameter_container: {type(parameter_container)}")
+                    continue
+                    
+                if "props" not in parameter_container:
+                    print("Skipping parameter_container without 'props'")
+                    continue
+                    
+                if "children" not in parameter_container["props"]:
+                    print("Skipping parameter_container without 'children'")
+                    continue
+                
+                # For dropdown, the structure might be different
+                if "type" in parameter_container["props"] and parameter_container["props"]["type"] == "Dropdown":
+                    # Handle dropdown directly
+                    if "value" in parameter_container["props"]:
+                        input_params[parameter_container["props"]["id"]["param_key"]] = parameter_container["props"]["value"]
+                    continue
+                
+                # For other components, follow the normal structure
+                parameter_item = parameter_container["props"]["children"]["props"]
+                
+                if not isinstance(parameter_item, dict):
+                    print(f"Skipping non-dict parameter_item: {type(parameter_item)}")
+                    continue
+                    
+                if "id" not in parameter_item or not isinstance(parameter_item["id"], dict):
+                    print("Skipping parameter_item without valid 'id'")
+                    continue
+                    
+                if "param_key" not in parameter_item["id"]:
+                    print("Skipping parameter_item without 'param_key'")
+                    continue
+                
+                key = parameter_item["id"]["param_key"]
+                
+                if "value" in parameter_item:
+                    value = parameter_item["value"]
+                elif "checked" in parameter_item:
+                    value = parameter_item["checked"]
+                else:
+                    # Skip parameters without a value
+                    print(f"Skipping parameter without value: {key}")
+                    continue
+                    
+                if "error" in parameter_item:
+                    if parameter_item["error"] is not False:
+                        errors = True
+                
+                input_params[key] = value
+                print(f"Successfully parsed parameter: {key} = {value}")
+            except Exception as e:
+                print(f"Warning while parsing parameter: {e}")
+                continue
+    except Exception as e:
+        print(f"Error in parse_model_params: {e}")
+        return {}, True
+
+    # Print detected parameters
+    print(f"Detected parameters: {input_params}")
 
     # Manually add data transformation parameters
     input_params["log"] = log
     input_params["percentiles"] = percentiles
     input_params["mask"] = mask if mask != "None" else None
+    
+    # Make sure input_type is included
+    if "input_type" not in input_params:
+        print("Warning: input_type not found in parameters, setting default")
+        input_params["input_type"] = "raw_images"
+    
     return input_params, errors

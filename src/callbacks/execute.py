@@ -232,6 +232,15 @@ def run_feature_extraction(
         },
         "data",
     ),
+    # add state to get jobid of feature-extraction-jobs
+    State(
+        {
+            "component": "DbcJobManagerAIO",
+            "subcomponent": "run-dropdown",
+            "aio_id": "feature-extraction-jobs",
+        },
+        "value",
+    ),
     prevent_initial_call=True,
 )
 def run_latent_space(
@@ -244,6 +253,7 @@ def run_latent_space(
     mask,
     job_name,
     project_name,
+    feature_extraction_job_id,
 ):
     """
     This callback submits a job request to the compute service
@@ -257,6 +267,7 @@ def run_latent_space(
         mask:                       Mask selection
         job_name:                   Job name
         project_name:               Project name
+        feature_extraction_job_id:  Selected feature extraction job ID
     Returns:
         open the alert indicating that the job was submitted
     """
@@ -276,6 +287,49 @@ def run_latent_space(
 
         data_project = DataProject.from_dict(data_project_dict)
         model_exec_params = dim_reduction_models[model_name]
+
+        # New add: handle input_type parameter for UMAP
+        if model_parameters["input_type"] == "latent_features":
+            if feature_extraction_job_id:
+                # Get the child job ID from the feature extraction job
+                children_job_ids = get_children_flow_run_ids(feature_extraction_job_id)
+                if children_job_ids:
+                    child_job_id = children_job_ids[0]
+                    
+                    # Create a new data project with the latent features
+                    expected_result_uri = f"/{USER}/{project_name}/{child_job_id}"
+                    data_project = DataProject.from_dict(
+                        {
+                            "root_uri": tiled_results.data_tiled_uri,
+                            "data_type": "tiled",
+                            "datasets": [{"uri": expected_result_uri, "cumulative_data_count": 0}],
+                            "project_id": None,
+                        },
+                        api_key=tiled_results.data_tiled_api_key,
+                    )
+                    
+                    # Add metadata to indicate this is latent feature data
+                    model_parameters["is_latent_features"] = True
+                    model_parameters["feature_extraction_job_id"] = feature_extraction_job_id
+                else:
+                    notification = generate_notification(
+                        "Model Parameters",
+                        "red",
+                        "fluent-mdl2:machine-learning",
+                        "Could not find feature extraction results for the selected job.",
+                    )
+                    return notification
+            else:
+                notification = generate_notification(
+                    "Model Parameters",
+                    "red",
+                    "fluent-mdl2:machine-learning",
+                    "Please run a feature extraction job first.",
+                )
+                return notification
+        else:
+            model_parameters["is_latent_features"] = False
+
         job_params = parse_job_params(
             data_project,
             model_parameters,

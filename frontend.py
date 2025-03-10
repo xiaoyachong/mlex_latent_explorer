@@ -97,25 +97,58 @@ def update_feature_extraction_model_parameters(model_name):
         },
         "children",
     ),
-    Input(
-        {
-            "component": "DbcJobManagerAIO",
-            "subcomponent": "model-list",
-            "aio_id": "latent-space-jobs",
-        },
-        "value",
-    ),
+    [
+        Input(
+            {
+                "component": "DbcJobManagerAIO",
+                "subcomponent": "model-list",
+                "aio_id": "latent-space-jobs",
+            },
+            "value",
+        ),
+        Input(
+            {
+                "component": "DbcJobManagerAIO",
+                "subcomponent": "run-dropdown",
+                "aio_id": "feature-extraction-jobs",
+            },
+            "options",
+        ),
+    ],
 )
-def update_dim_reduction_model_parameters(model_name):
+def update_dim_reduction_model_parameters(model_name, feature_extraction_jobs):
     model = dim_reduction_models[model_name]
+    
     if model["gui_parameters"]:
+        # Check if there are any feature extraction jobs available
+        has_feature_extraction_jobs = feature_extraction_jobs is not None and len(feature_extraction_jobs) > 0
+        
+        # Modify the input type dropdown to disable latent_features if no jobs are available
+        for param in model["gui_parameters"]:
+            if param["param_key"] == "input_type":
+                # If no feature extraction jobs available, adjust options or tooltips
+                if not has_feature_extraction_jobs:
+                    # Disable the latent features option or add a notice
+                    for option in param["options"]:
+                        if option["value"] == "latent_features":
+                            option["disabled"] = True
+                            option["label"] = "Latent Features (Run feature extraction first)"
+        
         item_list = mlex_components.get_parameter_items(
             _id={"type": str(uuid4())}, json_blob=model["gui_parameters"]
         )
+        
+        # If there are no feature extraction jobs, add a notice
+        if not has_feature_extraction_jobs and any(param["param_key"] == "input_type" for param in model["gui_parameters"]):
+            notice = html.Div(
+                "Note: To use latent features, first run a feature extraction job.",
+                style={"color": "red", "font-style": "italic", "margin-top": "10px"}
+            )
+            item_list.children.append(notice)
+            
         return item_list
     else:
         return html.Div("Model has no parameters")
-
 
 @app.callback(
     Output(
