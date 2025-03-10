@@ -1,6 +1,47 @@
 {
     "contents": [
         {
+        "model_name": "autoencoder_v1.0.0",
+        "version": "1.0.0",
+        "type": "latent_extraction",
+        "owner": "mlexchange team",
+        "image_name": "ghcr.io/mlexchange/mlex_pytorch_autoencoders",
+        "image_tag": "main",
+        "conda_env": "mlex_pytorch_autoencoders",
+        "application": [
+            "latent_space_explorer"
+        ],
+        "description": "Dimension reduction with pre-trained Autoencoder from MLflow",
+        "gui_parameters": [
+            {
+                "type": "dropdown",
+                "name": "nlatent-dropdown-menu",
+                "title": "Dimension of latent features",
+                "value": 16,
+                "options": [
+                    {
+                        "label": "16",
+                        "value": 16
+                    },
+                    {
+                        "label": "32",
+                        "value": 32
+                    }
+                ],
+                "param_key": "n_components"
+            },
+            {
+                "type": "str",
+                "name": "model-name",
+                "title": "Model Name",
+                "value": "autoencoder_model",
+                "param_key": "model_name"
+            }
+        ],
+        "python_file_name": "src/autoencoder_run.py",
+        "public": false
+        },
+        {
         "model_name": "umap_v1.0.0",
         "version": "1.0.0",
         "type": "dimension_reduction",

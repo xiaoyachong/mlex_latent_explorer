@@ -8,7 +8,7 @@ from mlex_utils.dash_utils.components_bootstrap.component_utils import (
 from ..utils.mask_utils import get_mask_options
 
 
-def sidebar(file_explorer, job_manager, clustering_job_manager):
+def sidebar(file_explorer, feature_extraction_job_manager, job_manager, clustering_job_manager):
     """
     Creates the dash components in the left sidebar of the app
     Args:
@@ -75,6 +75,15 @@ def sidebar(file_explorer, job_manager, clustering_job_manager):
                                         value="None",
                                     ),
                                 ),
+                            ],
+                        ),
+                        # Panel for extracting latent features with autoencoder
+                        dbc.AccordionItem(
+                            id="feature-extraction-controls",
+                            title="Extract latent features",
+                            children=[
+                                feature_extraction_job_manager,
+                                # No "Show Feature Vectors" switch since these are high-dimensional
                             ],
                         ),
                         dbc.AccordionItem(

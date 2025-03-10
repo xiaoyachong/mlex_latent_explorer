@@ -57,6 +57,36 @@ FLOW_NAME = os.getenv("FLOW_NAME", "")
 HOST = os.getenv("APP_HOST", "127.0.0.1")
 PORT = os.getenv("APP_PORT", "8070")
 
+# Update UI components for autoencoder model selection.
+@app.callback(
+    Output(
+        {
+            "component": "DbcJobManagerAIO",
+            "subcomponent": "model-parameters",
+            "aio_id": "feature-extraction-jobs",
+        },
+        "children",
+    ),
+    Input(
+        {
+            "component": "DbcJobManagerAIO",
+            "subcomponent": "model-list",
+            "aio_id": "feature-extraction-jobs",
+        },
+        "value",
+    ),
+)
+def update_feature_extraction_model_parameters(model_name):
+    from src.app_layout import latent_extraction_models
+    model = latent_extraction_models[model_name]
+    if model["gui_parameters"]:
+        item_list = mlex_components.get_parameter_items(
+            _id={"type": str(uuid4())}, json_blob=model["gui_parameters"]
+        )
+        return item_list
+    else:
+        return html.Div("Model has no parameters")
+    
 
 @app.callback(
     Output(

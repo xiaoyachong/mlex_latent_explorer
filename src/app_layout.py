@@ -60,6 +60,12 @@ dash_file_explorer.init_callbacks(app)
 file_explorer = dash_file_explorer.file_explorer
 
 # GET MODELS
+
+# New: Get latent extraction models
+latent_extraction_models = Models(
+    modelfile_path="./src/assets/default_models.json", model_type="latent_extraction"
+)
+
 dim_reduction_models = Models(
     modelfile_path="./src/assets/default_models.json", model_type="dimension_reduction"
 )
@@ -69,6 +75,15 @@ clustering_models = Models(
 
 # SETUP MLEx COMPONENTS
 mlex_components = MLExComponents("dbc")
+
+# NEW: Job manager for feature extraction (autoencoder models)
+feature_extraction_job_manager = mlex_components.get_job_manager_minimal(
+    model_list=latent_extraction_models.modelname_list,
+    mode=MODE,
+    aio_id="feature-extraction-jobs",
+    prefect_tags=PREFECT_TAGS + ["feature-extraction"],
+)
+
 job_manager = mlex_components.get_job_manager_minimal(
     model_list=dim_reduction_models.modelname_list,
     mode=MODE,
@@ -136,6 +151,7 @@ app.layout = html.Div(
             children=[
                 sidebar(
                     file_explorer,
+                    feature_extraction_job_manager,
                     job_manager,
                     clustering_job_manager,
                 ),
