@@ -110,7 +110,7 @@ class VAEModelWrapper(mlflow.pyfunc.PythonModel):
             ]
         )
 
-        print(f"✓ VAE model loaded successfully")
+        print("✓ VAE model loaded successfully")
 
     def predict(self, context, model_input):
         """
@@ -145,22 +145,22 @@ class VAEModelWrapper(mlflow.pyfunc.PythonModel):
             # uint8 is already the preferred format, no conversion needed
             img_array = model_input
         else:
+            # Percentile clipping
+            low, high = np.percentile(model_input, (1, 99))
+            clipped = np.clip(model_input, low, high)
             # Convert uint32 to uint8 with robust min-max scaling
-            array_min = model_input.min()
-            array_max = model_input.max()
+            array_min = clipped.min()
+            array_max = clipped.max()
             # Protect against divide-by-zero and handle the case where all values are the same
             if array_max > array_min:
                 # Scale using full range from min to max for better contrast
                 img_array = (
-                    (
-                        (model_input.astype(np.float32) - array_min)
-                        / (array_max - array_min)
-                    )
+                    ((clipped.astype(np.float32) - array_min) / (array_max - array_min))
                     * 255
                 ).astype(np.uint8)
             else:
                 # If all values are the same, create a uniform image
-                img_array = np.zeros_like(model_input, dtype=np.uint8)
+                img_array = np.zeros_like(clipped, dtype=np.uint8)
 
         try:
             # Convert numpy array to PIL Image
